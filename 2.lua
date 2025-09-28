@@ -1,4 +1,4 @@
---== WebhookLib.lua / 2.lua ==--
+--== WebhookLib.lua ==--
 local HttpService = game:GetService("HttpService")
 local Players     = game:GetService("Players")
 
@@ -75,13 +75,14 @@ function WebhookLib.Send(eventType, eventName, isGlobal)
              or (eventType == "ServerLuck" and WebhookLib.Links.ServerLuck)
     if not url or url == "" then return end
 
+    url = url:match("^%s*(.-)%s*$") -- trim spasi
+
     local color      = WebhookLib.Colors[eventName] or WebhookLib.Colors["Server Luck"]
     local serverLink = WebhookLib.GetServerLink(isGlobal)
     local playersNow = #Players:GetPlayers()
     local maxPlayers = Players.MaxPlayers or 0
     local playerText = playersNow.."/"..maxPlayers.." players"
-
-    local isoTime = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    local isoTime    = os.date("!%Y-%m-%dT%H:%M:%SZ")
 
     local embed = {
         title       = "ᯓ Chloe X Chloe X Chloe X",
@@ -89,18 +90,18 @@ function WebhookLib.Send(eventType, eventName, isGlobal)
         url         = "https://discord.gg/PaPvGUE8UC",
         color       = color,
         fields      = {
-            { name = "〢Event Name :", value = "```❯ "..eventName.."```" },
+            { name = "〢Event Name :",    value = "```❯ "..eventName.."```" },
             { name = "〢Event Spawned :", value = "```❯ "..isoTime.."```" },
             { name = "〢Server Player :", value = "```❯ "..playerText.."```" },
-            { name = "〢Link Server :", value = "```❯ [Join Here]("..serverLink..")```" },
-            { name = "〢Note :", value = "*Once the event ends this link may not working!*" }
+            { name = "〢Link Server :",   value = "```❯ [Join Here]("..serverLink..")```" },
+            { name = "〢Note :",          value = "*Once the event ends this link may not working!*" }
         },
         footer = {
-            text = "Chloe X Webhook",
+            text     = "Chloe X Webhook",
             icon_url = "https://i.imgur.com/WltO8IG.png"
         },
         timestamp = isoTime,
-        image = { url = "https://media.tenor.com/-i05eopE1VEAAAAC/gawr-gura-baseball.gif" }
+        image     = { url = "https://media.tenor.com/-i05eopE1VEAAAAC/gawr-gura-baseball.gif" }
     }
 
     local res = request({
@@ -114,10 +115,13 @@ function WebhookLib.Send(eventType, eventName, isGlobal)
         })
     })
 
-    if res and res.StatusCode then
-        print("[WebhookLib] Sent to", eventType, "| Status:", res.StatusCode)
+    if res then
+        print(string.format("[WebhookLib] %s | Status: %s", eventType, tostring(res.StatusCode)))
+        if res.Body and res.Body ~= "" then
+            print("[WebhookLib] Body:", res.Body)
+        end
     else
-        warn("[WebhookLib] Failed sending to", eventType)
+        warn("[WebhookLib] Request failed (no response)")
     end
 end
 
