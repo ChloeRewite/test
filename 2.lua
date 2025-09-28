@@ -73,13 +73,15 @@ function WebhookLib.Send(eventType, eventName, isGlobal)
     local url = (eventType == "Admin"      and WebhookLib.Links.Admin)
              or (eventType == "Hunt"       and WebhookLib.Links.Hunt)
              or (eventType == "ServerLuck" and WebhookLib.Links.ServerLuck)
-    if not url then return end
+    if not url or url == "" then return end
 
     local color      = WebhookLib.Colors[eventName] or WebhookLib.Colors["Server Luck"]
     local serverLink = WebhookLib.GetServerLink(isGlobal)
     local playersNow = #Players:GetPlayers()
     local maxPlayers = Players.MaxPlayers or 0
     local playerText = playersNow.."/"..maxPlayers.." players"
+
+    local isoTime = os.date("!%Y-%m-%dT%H:%M:%SZ")
 
     local embed = {
         title       = "ᯓ Chloe X Chloe X Chloe X",
@@ -88,7 +90,7 @@ function WebhookLib.Send(eventType, eventName, isGlobal)
         color       = color,
         fields      = {
             { name = "〢Event Name :", value = "```❯ "..eventName.."```" },
-            { name = "〢Event Spawned :", value = "```❯ "..os.date("!%Y-%m-%dT%H:%M:%S.000Z").."```" },
+            { name = "〢Event Spawned :", value = "```❯ "..isoTime.."```" },
             { name = "〢Server Player :", value = "```❯ "..playerText.."```" },
             { name = "〢Link Server :", value = "```❯ [Join Here]("..serverLink..")```" },
             { name = "〢Note :", value = "*Once the event ends this link may not working!*" }
@@ -97,11 +99,11 @@ function WebhookLib.Send(eventType, eventName, isGlobal)
             text = "Chloe X Webhook",
             icon_url = "https://i.imgur.com/WltO8IG.png"
         },
-        timestamp = os.date("!%Y-%m-%dT%H:%M:%S.000Z"),
+        timestamp = isoTime,
         image = { url = "https://media.tenor.com/-i05eopE1VEAAAAC/gawr-gura-baseball.gif" }
     }
 
-    request({
+    local res = request({
         Url     = url,
         Method  = "POST",
         Headers = { ["Content-Type"] = "application/json" },
@@ -111,6 +113,12 @@ function WebhookLib.Send(eventType, eventName, isGlobal)
             embeds     = { embed }
         })
     })
+
+    if res and res.StatusCode then
+        print("[WebhookLib] Sent to", eventType, "| Status:", res.StatusCode)
+    else
+        warn("[WebhookLib] Failed sending to", eventType)
+    end
 end
 
 function WebhookLib.Start()
