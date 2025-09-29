@@ -177,7 +177,7 @@ local SettingsBox = Tabs.Webhook:AddSection("Webhook Settings")
 
 SettingsBox:AddInput({
     Title = "Set Hunt Webhook",
-    Placeholder = "Input webhook link for Hunt",
+    Content = "Input webhook link for Hunt",
     Callback = function(value)
         if value and value:match("^https://discord.com/api/webhooks/") then
             WebhookLib.Links.Hunt = value
@@ -190,7 +190,7 @@ SettingsBox:AddInput({
 
 SettingsBox:AddInput({
     Title = "Set Luck Webhook",
-    Placeholder = "Input webhook link for Server Luck",
+    Content = "Input webhook link for Server Luck",
     Callback = function(value)
         if value and value:match("^https://discord.com/api/webhooks/") then
             WebhookLib.Links.ServerLuck = value
