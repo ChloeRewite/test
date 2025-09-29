@@ -173,51 +173,5 @@ function WebhookLib.Start()
     end)
 end
 
-local SettingsBox = Tabs.Webhook:AddSection("Webhook Settings")
-
-SettingsBox:AddInput({
-    Title = "Set Hunt Webhook",
-    Content = "Input webhook link for Hunt",
-    Callback = function(value)
-        if value and value:match("^https://discord.com/api/webhooks/") then
-            WebhookLib.Links.Hunt = value
-            chloex("Hunt webhook updated!")
-        else
-            chloex("Invalid Hunt webhook link!")
-        end
-    end
-})
-
-SettingsBox:AddInput({
-    Title = "Set Luck Webhook",
-    Content = "Input webhook link for Server Luck",
-    Callback = function(value)
-        if value and value:match("^https://discord.com/api/webhooks/") then
-            WebhookLib.Links.ServerLuck = value
-            chloex("Server Luck webhook updated!")
-        else
-            chloex("Invalid Server Luck webhook link!")
-        end
-    end
-})
-
-SettingsBox:AddToggle({
-    Title = "Auto Send Webhook",
-    Default = true,
-    Callback = function(state)
-        if state then
-            _G.WebhookDisabled = false
-            if not _G.WebhookStarted then
-                _G.WebhookStarted = true
-                WebhookLib.Start()
-            end
-            chloex("Webhook auto-send enabled!")
-        else
-            _G.WebhookDisabled = true
-            chloex("Webhook auto-send disabled!")
-        end
-    end
-})
-
 _G.WebhookLib = WebhookLib
 return WebhookLib
