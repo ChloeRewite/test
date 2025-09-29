@@ -11,9 +11,9 @@ end
 local WebhookLib = {}
 
 WebhookLib.Links = {
-    Admin      = "https://discord.com/api/webhooks/xxxxx/xxxxx",
-    Hunt       = "https://discord.com/api/webhooks/xxxxx/xxxxx",
-    ServerLuck = "https://discord.com/api/webhooks/xxxxx/xxxxx"
+    Admin      = "https://discord.com/api/webhooks/1421935898844463255/4aU-HZPhaYKI_H6o3DitbExoHK-Gh09aXTazuyjRUWA3j2zbPKbdBvxAZhfDgMg99R7H",
+    Hunt       = "https://discord.com/api/webhooks/1421935714207137953/13hLIVAAElqwa5xlCOXTsj3a5qD37f34beXGuLYQEZEy9MFeyw9Kq0C4wmkiq3473iNi",
+    ServerLuck = "https://discord.com/api/webhooks/1421935799313891469/6BHx18mqBox7BZ4W_esNqOoq4r2VqqapMyQ-FSun-kFKci6WQamHr_SQVOyNgSthtier"
 }
 
 WebhookLib.Colors = {
@@ -52,6 +52,8 @@ WebhookLib.AdminEvents = {
     ["Admin - Meteor Rain"] = true,
 }
 
+local sentEvents = {}
+
 local function getISOTime()
     return os.date("!%Y-%m-%dT%H:%M:%SZ")
 end
@@ -75,14 +77,19 @@ function WebhookLib.GetServerLink(isGlobal)
 end
 
 function WebhookLib.Send(eventType, eventName, isGlobal)
-    if _G.WebhookDisabled then return end
     if WebhookLib.Ignore[eventName] then return end
+    if sentEvents[eventName] then return end
+    sentEvents[eventName] = true
 
-    local url = (eventType == "Admin"      and WebhookLib.Links.Admin)
-             or (eventType == "Hunt"       and WebhookLib.Links.Hunt)
-             or (eventType == "ServerLuck" and WebhookLib.Links.ServerLuck)
+    local url
+    if _G.WebhookDisabled then
+        url = WebhookLib.Links.Hunt
+    else
+        url = (eventType == "Admin"      and WebhookLib.Links.Admin)
+           or (eventType == "Hunt"       and WebhookLib.Links.Hunt)
+           or (eventType == "ServerLuck" and WebhookLib.Links.ServerLuck)
+    end
     if not url or url == "" then return end
-
     url = url:match("^%s*(.-)%s*$")
 
     local color      = WebhookLib.Colors[eventName] or WebhookLib.Colors["Server Luck"]
@@ -94,7 +101,6 @@ function WebhookLib.Send(eventType, eventName, isGlobal)
     local embed = {
         title       = "ᯓ Chloe X Chloe X Chloe X",
         description = "Wakey wakeyyyy! Chloe found some event :",
-        url         = "https://discord.gg/PaPvGUE8UC",
         color       = color,
         fields      = {
             { name = "〢Event Name :",    value = "```❯ "..eventName.."```" },
@@ -103,33 +109,20 @@ function WebhookLib.Send(eventType, eventName, isGlobal)
             { name = "〢Link Server :",   value = "[Join Here]("..serverLink..")" },
             { name = "〢Note :",          value = "*Once the event ends this link may not working!*" }
         },
-        footer = {
-            text     = "Chloe X Webhook",
-            icon_url = "https://i.imgur.com/WltO8IG.png"
-        },
-        timestamp = getISOTime(),
-        image     = { url = "https://media.tenor.com/-i05eopE1VEAAAAC/gawr-gura-baseball.gif" }
+        footer = { text = "Chloe X Webhook" },
+        timestamp = getISOTime()
     }
 
-    local res = request({
+    request({
         Url     = url,
         Method  = "POST",
         Headers = { ["Content-Type"] = "application/json" },
         Body    = HttpService:JSONEncode({
-            username   = "Aqua Aqua Aqua",
+            username   = "Chloe X",
             avatar_url = "https://i.imgur.com/9afHGRy.jpeg",
             embeds     = { embed }
         })
     })
-
-    if res then
-        print(string.format("[WebhookLib] %s | Status: %s", eventType, tostring(res.StatusCode)))
-        if res.Body and res.Body ~= "" then
-            print("[WebhookLib] Body:", res.Body)
-        end
-    else
-        warn("[WebhookLib] Request failed (no response)")
-    end
 end
 
 function WebhookLib.Start()
@@ -179,6 +172,52 @@ function WebhookLib.Start()
         end
     end)
 end
+
+local SettingsBox = Tabs.Webhook:AddSection("Webhook Settings")
+
+SettingsBox:AddInput({
+    Title = "Set Hunt Webhook",
+    Placeholder = "Input webhook link for Hunt",
+    Callback = function(value)
+        if value and value:match("^https://discord.com/api/webhooks/") then
+            WebhookLib.Links.Hunt = value
+            chloex("Hunt webhook updated!")
+        else
+            chloex("Invalid Hunt webhook link!")
+        end
+    end
+})
+
+SettingsBox:AddInput({
+    Title = "Set Luck Webhook",
+    Placeholder = "Input webhook link for Server Luck",
+    Callback = function(value)
+        if value and value:match("^https://discord.com/api/webhooks/") then
+            WebhookLib.Links.ServerLuck = value
+            chloex("Server Luck webhook updated!")
+        else
+            chloex("Invalid Server Luck webhook link!")
+        end
+    end
+})
+
+SettingsBox:AddToggle({
+    Title = "Auto Send Webhook",
+    Default = true,
+    Callback = function(state)
+        if state then
+            _G.WebhookDisabled = false
+            if not _G.WebhookStarted then
+                _G.WebhookStarted = true
+                WebhookLib.Start()
+            end
+            chloex("Webhook auto-send enabled!")
+        else
+            _G.WebhookDisabled = true
+            chloex("Webhook auto-send disabled!")
+        end
+    end
+})
 
 _G.WebhookLib = WebhookLib
 return WebhookLib
