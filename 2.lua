@@ -52,6 +52,14 @@ WebhookLib.AdminEvents = {
     ["Admin - Meteor Rain"] = true,
 }
 
+local function getISOTime()
+    return os.date("!%Y-%m-%dT%H:%M:%SZ")
+end
+
+local function getReadableTime()
+    return os.date("%Y-%m-%d %H:%M:%S")
+end
+
 function WebhookLib.GetServerLink(isGlobal)
     if isGlobal then
         return "https://www.roblox.com/games/" .. tostring(game.PlaceId)
@@ -75,14 +83,13 @@ function WebhookLib.Send(eventType, eventName, isGlobal)
              or (eventType == "ServerLuck" and WebhookLib.Links.ServerLuck)
     if not url or url == "" then return end
 
-    url = url:match("^%s*(.-)%s*$") -- trim spasi
+    url = url:match("^%s*(.-)%s*$")
 
     local color      = WebhookLib.Colors[eventName] or WebhookLib.Colors["Server Luck"]
     local serverLink = WebhookLib.GetServerLink(isGlobal)
     local playersNow = #Players:GetPlayers()
     local maxPlayers = Players.MaxPlayers or 0
     local playerText = playersNow.."/"..maxPlayers.." players"
-    local isoTime    = os.date("!%Y-%m-%dT%H:%M:%SZ")
 
     local embed = {
         title       = "ᯓ Chloe X Chloe X Chloe X",
@@ -91,16 +98,16 @@ function WebhookLib.Send(eventType, eventName, isGlobal)
         color       = color,
         fields      = {
             { name = "〢Event Name :",    value = "```❯ "..eventName.."```" },
-            { name = "〢Event Spawned :", value = "```❯ "..isoTime.."```" },
+            { name = "〢Event Spawned :", value = "```❯ "..getReadableTime().."```" },
             { name = "〢Server Player :", value = "```❯ "..playerText.."```" },
-            { name = "〢Link Server :",   value = "```❯ [Join Here]("..serverLink..")```" },
+            { name = "〢Link Server :",   value = "[Join Here]("..serverLink..")" },
             { name = "〢Note :",          value = "*Once the event ends this link may not working!*" }
         },
         footer = {
             text     = "Chloe X Webhook",
             icon_url = "https://i.imgur.com/WltO8IG.png"
         },
-        timestamp = isoTime,
+        timestamp = getISOTime(),
         image     = { url = "https://media.tenor.com/-i05eopE1VEAAAAC/gawr-gura-baseball.gif" }
     }
 
@@ -140,10 +147,16 @@ function WebhookLib.Start()
                     child:GetPropertyChangedSignal("Visible"):Connect(function()
                         if child.Visible then WebhookLib.Send("Hunt", child.Name, false) end
                     end)
+                    if child.Visible then
+                        WebhookLib.Send("Hunt", child.Name, false)
+                    end
                 elseif WebhookLib.AdminEvents[child.Name] then
                     child:GetPropertyChangedSignal("Visible"):Connect(function()
                         if child.Visible then WebhookLib.Send("Admin", child.Name, true) end
                     end)
+                    if child.Visible then
+                        WebhookLib.Send("Admin", child.Name, true)
+                    end
                 end
             end
         end
@@ -158,6 +171,11 @@ function WebhookLib.Start()
                     WebhookLib.Send("ServerLuck", "Server Luck "..text, false)
                 end
             end)
+            if luckFrame.Visible then
+                local counter = luckFrame:FindFirstChild("LuckCounter")
+                local text    = counter and counter.Text or "x?"
+                WebhookLib.Send("ServerLuck", "Server Luck "..text, false)
+            end
         end
     end)
 end
