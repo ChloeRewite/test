@@ -456,42 +456,8 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
     })
 
     local SvX = Tabs.Misc:AddSection("Server Features")
-    local reconnecting, queueEnabled, virtualUserConn, gcDisabled = true, false, nil, true
-
-    SvX:AddToggle({
-        Title = "Anti AFK V1",
-        Default = true,
-        Callback = function(state)
-            gcDisabled = state
-            if state then
-                local GC = getconnections or get_signal_cons
-                if GC then
-                    for _, v in pairs(GC(LocalPlayer.Idled)) do
-                        if v.Disable then v:Disable() elseif v.Disconnect then v:Disconnect() end
-                    end
-                end
-            end
-        end
-    })
-
-    SvX:AddToggle({
-        Title = "Anti AFK V2",
-        Default = true,
-        Callback = function(state)
-            if state then
-                if virtualUserConn then virtualUserConn:Disconnect() end
-                local VirtualUser = cloneref and cloneref(game:GetService("VirtualUser")) or game:GetService("VirtualUser")
-                virtualUserConn = LocalPlayer.Idled:Connect(function()
-                    VirtualUser:CaptureController()
-                    VirtualUser:ClickButton2(Vector2.new())
-                end)
-            elseif virtualUserConn then
-                virtualUserConn:Disconnect()
-                virtualUserConn = nil
-            end
-        end
-    })
-
+    local reconnecting, queueEnabled = true, false,
+    
     SvX:AddToggle({
         Title = "Auto Reconnect",
         Default = true,
@@ -533,36 +499,20 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
         end
     })
 
-    task.defer(function()
-        local GC = getconnections or get_signal_cons
-        if GC then
-            for _, v in pairs(GC(LocalPlayer.Idled)) do
-                if v.Disable then v:Disable() elseif v.Disconnect then v:Disconnect() end
+    --== Anti AFK
+    local GC = getconnections or get_signal_cons
+    if GC then
+        for _, v in pairs(GC(LocalPlayer.Idled)) do
+            if v.Disable then
+                v:Disable()
+            elseif v.Disconnect then
+                v:Disconnect()
             end
         end
-
-        local VirtualUser = cloneref and cloneref(game:GetService("VirtualUser")) or game:GetService("VirtualUser")
-        if virtualUserConn then virtualUserConn:Disconnect() end
-        virtualUserConn = LocalPlayer.Idled:Connect(function()
-            VirtualUser:CaptureController()
-            VirtualUser:ClickButton2(Vector2.new())
-        end)
-
-        GuiService.ErrorMessageChanged:Connect(function()
-            task.wait(0.5)
-            local success = pcall(function()
-                if privateServerId ~= "" then
-                    TeleportService:TeleportToPrivateServer(placeId, privateServerId, {LocalPlayer})
-                else
-                    TeleportService:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
-                end
-            end)
-            if not success then
-                task.wait(2)
-                pcall(function()
-                    TeleportService:Teleport(placeId, LocalPlayer)
-                end)
-            end
-        end)
+    end
+    local VirtualUser = cloneref and cloneref(game:GetService("VirtualUser")) or game:GetService("VirtualUser")
+    LocalPlayer.Idled:Connect(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
     end)
 end
