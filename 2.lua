@@ -249,7 +249,7 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
         end
     })
 
-    local Misc = Tabs.Misc:AddSection("Misc")
+    local Misc = Tabs.Misc:AddSection("Utility Player")
     local NoclipEnabled, WalkspeedEnabled, InfJumpEnabled = false, false, false
     local WalkspeedValue = 16
 
