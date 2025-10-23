@@ -151,10 +151,14 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
     InfoSection1:AddButton({
         Title = "Rejoin Server",
         Callback = function()
-            TeleportService:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
+                        local TeleportService = game:GetService("TeleportService")
+            local Players = game:GetService("Players")
+            local LocalPlayer = Players.LocalPlayer
+
+            TeleportService:Teleport(game.PlaceId, LocalPlayer)
         end
     })
-
+    
     local MiscBooster = Tabs.Misc:AddSection("Booster FPS")
 
     MiscBooster:AddToggle({
