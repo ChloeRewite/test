@@ -38,120 +38,7 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
         end
     })
 
-    local InfoSection1 = Tabs.Info:AddSection("Server Job Id")
-    local thumb, _ = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot,
-        Enum.ThumbnailSize.Size100x100)
-    local currentJobId = "CHX-" .. tostring(jobId)
-
-    InfoSection1:AddPanel({
-        Title = "Server Info",
-        Content = string.format(
-            "<b><font color='rgb(0,200,255)'>Player</font></b>: %d/%d\n<b><font color='rgb(255,255,0)'>JobID</font></b>: %s",
-            #Players:GetPlayers(), Players.MaxPlayers, currentJobId
-        ),
-        Icon = thumb,
-        ButtonText = "Copy JobID",
-        ButtonCallback = function()
-            if setclipboard then
-                setclipboard(currentJobId)
-                chloex("Succesfully Copied!")
-            end
-        end,
-        SubButtonText = "Rejoin",
-        SubButtonCallback = function()
-            TeleportService:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
-        end
-    })
-
-    local InputJobId = ""
-    InfoSection1:AddInput({
-        Title = "Input JobID",
-        Default = "",
-        Callback = function(value)
-            InputJobId = value
-        end
-    })
-
-    InfoSection1:AddButton({
-        Title = "Join JobID",
-        Callback = function()
-            if InputJobId ~= "" then
-                local realJobId = InputJobId:gsub("^CHX%-", "")
-                TeleportService:TeleportToPlaceInstance(placeId, realJobId, LocalPlayer)
-            else
-                chloex("Input Job Id!")
-            end
-        end
-    })
-
-    InfoSection1:AddButton({
-        Title = "ServerHop Lowest",
-        Callback = function()
-            task.spawn(function()
-                local Cursor
-                local LowestServer, LowestPlayers = nil, math.huge
-                repeat
-                    local url = "https://games.roblox.com/v1/games/" ..
-                    placeId .. "/servers/Public?sortOrder=Asc&limit=100" .. (Cursor and "&cursor=" .. Cursor or "")
-                    local success, response = pcall(game.HttpGet, game, url)
-                    if success and response then
-                        local data = HttpService:JSONDecode(response)
-                        for _, server in ipairs(data.data) do
-                            if server.playing < server.maxPlayers and server.id ~= jobId then
-                                if server.playing < LowestPlayers then
-                                    LowestPlayers = server.playing
-                                    LowestServer = server.id
-                                end
-                            end
-                        end
-                        Cursor = data.nextPageCursor
-                    else
-                        break
-                    end
-                    task.wait(0.2)
-                until not Cursor
-
-                if LowestServer then
-                    TeleportService:TeleportToPlaceInstance(placeId, LowestServer, LocalPlayer)
-                else
-                    chloex("No other server found.")
-                end
-            end)
-        end,
-        SubTitle = "ServerHop Random",
-        SubCallback = function()
-            task.spawn(function()
-                local Cursor
-                local Servers = {}
-                repeat
-                    local url = "https://games.roblox.com/v1/games/" ..
-                    placeId .. "/servers/Public?sortOrder=Asc&limit=100" .. (Cursor and "&cursor=" .. Cursor or "")
-                    local success, response = pcall(game.HttpGet, game, url)
-                    if success and response then
-                        local data = HttpService:JSONDecode(response)
-                        for _, server in ipairs(data.data) do
-                            if server.playing < server.maxPlayers and server.id ~= jobId then
-                                table.insert(Servers, server.id)
-                            end
-                        end
-                        Cursor = data.nextPageCursor
-                    else
-                        break
-                    end
-                    task.wait(0.2)
-                until not Cursor
-
-                if #Servers > 0 then
-                    local randomServer = Servers[math.random(1, #Servers)]
-                    TeleportService:TeleportToPlaceInstance(placeId, randomServer, LocalPlayer)
-                else
-                    chloex("No available server found!")
-                end
-            end)
-        end
-    })
-
-    InfoSection1:AddButton({
+    InfoSection:AddButton({
         Title = "Rejoin Server",
         Callback = function()
             local TeleportService = game:GetService("TeleportService")
@@ -171,51 +58,65 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
         Callback = function(state)
             if typeof(RunService.Set3dRenderingEnabled) == "function" then
                 RunService:Set3dRenderingEnabled(not state)
+                SaveConfig()
             end
         end
     })
 
-    local originalStates = {}
-
     MiscBooster:AddToggle({
         Title = "Reduce Map",
-        Content = "Fps Booster!",
+        Content = "Dont turn on this with Disable 3D Render",
         Default = false,
-        Callback = function(value)
-            if value then
-                originalStates = {}
+        Callback = function(state)
+            if state then
                 for _, obj in ipairs(workspace:GetDescendants()) do
                     if obj:IsA("BasePart") then
-                        originalStates[obj] = { Material = obj.Material, Color = obj.Color }
                         obj.Material = Enum.Material.Plastic
-                        obj.Color = Color3.new(1, 1, 1)
-                    elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+                        obj.CastShadow = false
+                        obj.Reflectance = 0
+                    elseif obj:IsA("Decal") or obj:IsA("Texture") then
+                        obj.Transparency = 1
+                    elseif obj:IsA("ParticleEmitter")
+                        or obj:IsA("Trail")
+                        or obj:IsA("Beam")
+                        or obj:IsA("Smoke")
+                        or obj:IsA("Fire")
+                        or obj:IsA("Sparkles") then
                         obj.Enabled = false
-                    elseif obj:IsA("Shirt") or obj:IsA("Pants") or obj:IsA("ShirtGraphic") or obj:IsA("Accessory") then
-                        obj.Archivable = false
-                        obj.Parent = nil
+                    elseif obj:IsA("Highlight") then
+                        obj:Destroy()
+                    elseif obj:IsA("MeshPart") then
+                        obj.MeshId = ""
+                        obj.TextureID = ""
+                    elseif obj:IsA("SpecialMesh") then
+                        obj.MeshId = ""
+                        obj.TextureId = ""
                     end
                 end
+
+                local Lighting = game:GetService("Lighting")
+
+                for _, eff in ipairs(Lighting:GetChildren()) do
+                    if eff:IsA("BloomEffect")
+                        or eff:IsA("DepthOfFieldEffect")
+                        or eff:IsA("ColorCorrectionEffect")
+                        or eff:IsA("SunRaysEffect") then
+                        eff.Enabled = false
+                    end
+                end
+
+                Lighting.GlobalShadows = false
+                Lighting.FogStart = 9e9
+                Lighting.FogEnd = 9e9
+                Lighting.Brightness = 1
+
                 if workspace:FindFirstChild("Terrain") then
                     local t = workspace.Terrain
-                    t.WaterWaveSize, t.WaterWaveSpeed, t.WaterReflectance, t.WaterTransparency = 0, 0, 0, 0
+                    t.WaterWaveSize = 0
+                    t.WaterWaveSpeed = 0
+                    t.WaterReflectance = 0
+                    t.WaterTransparency = 1
                 end
-            else
-                for obj, data in pairs(originalStates) do
-                    if obj and obj:IsDescendantOf(workspace) then
-                        obj.Material, obj.Color = data.Material, data.Color
-                    end
-                end
-                for _, obj in ipairs(workspace:GetDescendants()) do
-                    if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
-                        obj.Enabled = true
-                    end
-                end
-                if workspace:FindFirstChild("Terrain") then
-                    local t = workspace.Terrain
-                    t.WaterWaveSize, t.WaterWaveSpeed, t.WaterReflectance, t.WaterTransparency = 0.15, 10, 1, 0.3
-                end
-                originalStates = {}
             end
         end
     })
@@ -330,6 +231,37 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
         end
     end)
 
+    local defaultZoom = 128
+    local zoomConn
+
+    Misc:AddToggle({
+        Title = "Max Zoom 1000",
+        Content = "Increase max camera distance",
+        Default = false,
+        Callback = function(state)
+            local lp = Players.LocalPlayer
+
+            if zoomConn then
+                zoomConn:Disconnect()
+                zoomConn = nil
+            end
+
+            if state then
+                lp.CameraMaxZoomDistance = 1000
+                lp.CameraMinZoomDistance = 0.5
+
+                zoomConn = lp.CharacterAdded:Connect(function()
+                    task.wait(0.3)
+                    lp.CameraMaxZoomDistance = 1000
+                    lp.CameraMinZoomDistance = 0.5
+                end)
+            else
+                lp.CameraMaxZoomDistance = defaultZoom
+                lp.CameraMinZoomDistance = 0.5
+            end
+        end
+    })
+
     Misc:AddSubSection("Fly Features")
 
     local FLYING, QEfly, iyflyspeed = false, true, 1
@@ -337,7 +269,7 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
 
     local function getRoot(char)
         return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or
-        char:FindFirstChild("UpperTorso")
+            char:FindFirstChild("UpperTorso")
     end
 
     local function NOFLY()
@@ -380,11 +312,11 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
                     local cam = workspace.CurrentCamera
                     if not vfly then humanoid.PlatformStand = true end
                     SPEED = (CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0) and
-                    (iyflyspeed * 50) or 0
+                        (iyflyspeed * 50) or 0
                     if SPEED ~= 0 then
                         BV.Velocity = ((cam.CFrame.LookVector * (CONTROL.F + CONTROL.B)) +
-                            ((cam.CFrame * CFrame.new(CONTROL.L + CONTROL.R, (CONTROL.F + CONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).p) - cam.CFrame.p)) *
-                        SPEED
+                                ((cam.CFrame * CFrame.new(CONTROL.L + CONTROL.R, (CONTROL.F + CONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).p) - cam.CFrame.p)) *
+                            SPEED
                         lCONTROL = { F = CONTROL.F, B = CONTROL.B, L = CONTROL.L, R = CONTROL.R }
                     else
                         BV.Velocity = Vector3.zero
@@ -440,7 +372,7 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
         local humanoid = char:FindFirstChildOfClass("Humanoid")
         local cam = workspace.CurrentCamera
         local control = require(plr:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"):WaitForChild(
-        "ControlModule"))
+            "ControlModule"))
 
         local bv, bg = Instance.new("BodyVelocity"), Instance.new("BodyGyro")
         bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
@@ -503,31 +435,30 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
     end)
 
     local INPUT_PRIORITY = Enum.ContextActionPriority.High.Value
-    local lastFreecamCF = nil
+    local lastFreecamCF
 
     Spring = {}
-    do
-        Spring.__index = Spring
-        function Spring.new(freq, pos)
-            local self = setmetatable({}, Spring)
-            self.f = freq
-            self.p = pos
-            self.v = pos * 0
-            return self
-        end
+    Spring.__index = Spring
 
-        function Spring:Update(dt, goal)
-            local f = self.f * 2 * math.pi
-            local offset, decay = goal - self.p, math.exp(-f * dt)
-            local p1 = goal + (self.v * dt - offset * (f * dt + 1)) * decay
-            local v1 = (f * dt * (offset * f - self.v) + self.v) * decay
-            self.p, self.v = p1, v1
-            return p1
-        end
+    function Spring.new(freq, pos)
+        local self = setmetatable({}, Spring)
+        self.f = freq
+        self.p = pos
+        self.v = pos * 0
+        return self
+    end
 
-        function Spring:Reset(pos)
-            self.p, self.v = pos, pos * 0
-        end
+    function Spring:Update(dt, goal)
+        local f = self.f * 2 * math.pi
+        local offset, decay = goal - self.p, math.exp(-f * dt)
+        local p1 = goal + (self.v * dt - offset * (f * dt + 1)) * decay
+        local v1 = (f * dt * (offset * f - self.v) + self.v) * decay
+        self.p, self.v = p1, v1
+        return p1
+    end
+
+    function Spring:Reset(pos)
+        self.p, self.v = pos, pos * 0
     end
 
     cameraPos, cameraRot = Vector3.new(), Vector2.new()
@@ -538,12 +469,40 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
     do
         local keyboard = { W = 0, A = 0, S = 0, D = 0, E = 0, Q = 0, Up = 0, Down = 0 }
         local mouse = { Delta = Vector2.new() }
+        local touchPan = Vector2.new()
+        local touching = false
         local NAV_KEYBOARD_SPEED = Vector3.new(1, 1, 1)
         local PAN_MOUSE_SPEED = Vector2.new(1, 1) * (math.pi / 64)
         local NAV_ADJ_SPEED, NAV_SHIFT_MUL = 0.75, 0.25
         local navSpeed = 1
+        local mobileBoost = 1
+        local lastTap = 0
+
+        UserInputService.TouchStarted:Connect(function()
+            local t = tick()
+            if t - lastTap < 0.25 then
+                mobileBoost = mobileBoost == 1 and 2 or 1
+            end
+            lastTap = t
+            touching = true
+        end)
+
+        UserInputService.TouchEnded:Connect(function()
+            touching = false
+            touchPan = Vector2.new()
+        end)
+
+        UserInputService.TouchMoved:Connect(function(touch)
+            if touching then
+                touchPan = Vector2.new(-touch.Delta.y, -touch.Delta.x)
+            end
+        end)
 
         function Input.Vel(dt)
+            if UserInputService.TouchEnabled then
+                local mv = LocalPlayer:GetMoveVector()
+                return Vector3.new(mv.X, 0, -mv.Z) * mobileBoost
+            end
             navSpeed = math.clamp(navSpeed + dt * (keyboard.Up - keyboard.Down) * NAV_ADJ_SPEED, 0.01, 4)
             local move = Vector3.new(keyboard.D - keyboard.A, keyboard.E - keyboard.Q, keyboard.S - keyboard.W)
             local shift = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
@@ -551,9 +510,14 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
         end
 
         function Input.Pan(dt)
-            local kMouse = mouse.Delta * PAN_MOUSE_SPEED
+            if UserInputService.TouchEnabled then
+                local v = touchPan * (math.pi / 360)
+                touchPan = Vector2.new()
+                return v
+            end
+            local v = mouse.Delta * PAN_MOUSE_SPEED
             mouse.Delta = Vector2.new()
-            return kMouse
+            return v
         end
 
         function Keypress(_, state, input)
@@ -562,47 +526,52 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
         end
 
         function MousePan(_, _, input)
-            local delta = input.Delta
-            mouse.Delta = Vector2.new(-delta.y, -delta.x)
+            if UserInputService.TouchEnabled then return Enum.ContextActionResult.Sink end
+            mouse.Delta = Vector2.new(-input.Delta.y, -input.Delta.x)
             return Enum.ContextActionResult.Sink
         end
 
         function Zero(t)
-            for k, v in pairs(t) do t[k] = v * 0 end
+            for k in pairs(t) do t[k] = 0 end
         end
 
         function Input.StartCapture()
-            ContextActionService:BindActionAtPriority("FreecamKeyboard", Keypress, false, INPUT_PRIORITY,
-                Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D,
-                Enum.KeyCode.E, Enum.KeyCode.Q, Enum.KeyCode.Up, Enum.KeyCode.Down)
-            ContextActionService:BindActionAtPriority("FreecamMousePan", MousePan, false, INPUT_PRIORITY,
-                Enum.UserInputType.MouseMovement)
+            if not UserInputService.TouchEnabled then
+                ContextActionService:BindActionAtPriority("FreecamKeyboard", Keypress, false, INPUT_PRIORITY,
+                    Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D,
+                    Enum.KeyCode.E, Enum.KeyCode.Q, Enum.KeyCode.Up, Enum.KeyCode.Down)
+                ContextActionService:BindActionAtPriority("FreecamMousePan", MousePan, false, INPUT_PRIORITY,
+                    Enum.UserInputType.MouseMovement)
+            end
         end
 
         function Input.StopCapture()
-            navSpeed = 1
             Zero(keyboard)
             Zero(mouse)
-            ContextActionService:UnbindAction("FreecamKeyboard")
-            ContextActionService:UnbindAction("FreecamMousePan")
+            if not UserInputService.TouchEnabled then
+                ContextActionService:UnbindAction("FreecamKeyboard")
+                ContextActionService:UnbindAction("FreecamMousePan")
+            end
         end
     end
 
     function GetFocusDistance(cf)
         local znear, viewport = 0.1, Camera.ViewportSize
-        local projy, projx = 2 * math.tan(math.rad(70 / 2)), (viewport.x / viewport.y) * 2 * math.tan(math.rad(70 / 2))
+        local projy = 2 * math.tan(math.rad(70 / 2))
+        local projx = (viewport.X / viewport.Y) * projy
         local fx, fy, fz = cf.RightVector, cf.UpVector, cf.LookVector
         local minDist, minVect = 512, Vector3.new()
         for x = 0, 1, 0.5 do
             for y = 0, 1, 0.5 do
-                local cx, cy = (x - 0.5) * projx, (y - 0.5) * projy
+                local cx = (x - 0.5) * projx
+                local cy = (y - 0.5) * projy
                 local offset = fx * cx - fy * cy + fz
                 local origin = cf.Position + offset * znear
                 local _, hit = workspace:FindPartOnRay(Ray.new(origin, offset.Unit * minDist))
                 if hit then
-                    local dist = (hit - origin).Magnitude
-                    if dist < minDist then
-                        minDist, minVect = dist, offset.Unit
+                    local d = (hit - origin).Magnitude
+                    if d < minDist then
+                        minDist, minVect = d, offset.Unit
                     end
                 end
             end
@@ -613,35 +582,26 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
     function StepFreecam(dt)
         local vel = velSpring:Update(dt, Input.Vel(dt))
         local pan = panSpring:Update(dt, Input.Pan(dt))
-        local zoomFactor = math.sqrt(math.tan(math.rad(70 / 2)) / math.tan(math.rad(cameraFov / 2)))
-        cameraRot = cameraRot + pan * Vector2.new(0.75, 1) * 8 * (dt / zoomFactor)
-        cameraRot = Vector2.new(math.clamp(cameraRot.x, -math.rad(90), math.rad(90)), cameraRot.y % (2 * math.pi))
-        local cf = CFrame.new(cameraPos) * CFrame.fromOrientation(cameraRot.x, cameraRot.y, 0) *
-        CFrame.new(vel * 64 * dt)
+        cameraRot = cameraRot + pan * Vector2.new(0.75, 1)
+        cameraRot = Vector2.new(math.clamp(cameraRot.X, -math.rad(90), math.rad(90)), cameraRot.Y)
+        local cf = CFrame.new(cameraPos) * CFrame.fromOrientation(cameraRot.X, cameraRot.Y, 0) *
+            CFrame.new(vel * 64 * dt)
         cameraPos = cf.Position
         Camera.CFrame = cf
         Camera.Focus = cf * CFrame.new(0, 0, -GetFocusDistance(cf))
-        Camera.FieldOfView = cameraFov
-        lastFreecamCF = cf
     end
 
     PlayerState = {}
-    do
-        function PlayerState.Push()
-            cameraFov = Camera.FieldOfView
-            Camera.CameraType = Enum.CameraType.Custom
-        end
+    function PlayerState.Push() end
 
-        function PlayerState.Pop()
-            Camera.CameraType = Enum.CameraType.Custom
-        end
-    end
+    function PlayerState.Pop() end
 
     function StartFreecam(pos)
         if fcRunning then StopFreecam() end
         local cf = pos or lastFreecamCF or Camera.CFrame
-        cameraRot, cameraPos = Vector2.new(), cf.Position
-        cameraFov = Camera.FieldOfView
+        cameraRot = Vector2.new()
+        cameraPos = cf.Position
+        lastFreecamCF = cf
         velSpring:Reset(Vector3.new())
         panSpring:Reset(Vector2.new())
         PlayerState.Push()
@@ -655,9 +615,7 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
         Input.StopCapture()
         RunService:UnbindFromRenderStep("Freecam")
         PlayerState.Pop()
-        Camera.FieldOfView = 70
         fcRunning = false
-        print("[Freecam] Stopped & Position Saved")
     end
 
     function ResetFreecamPosition()
@@ -667,7 +625,6 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
         cameraPos = cf.Position
         cameraRot = Vector2.new()
         lastFreecamCF = cf
-        print("[Freecam] Reset to player front")
     end
 
     Misc:AddToggle({
@@ -676,10 +633,8 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
         Callback = function(state)
             if state then
                 StartFreecam()
-                print("[Freecam] Activated")
             else
                 StopFreecam()
-                print("[Freecam] Deactivated")
             end
         end
     })
@@ -690,48 +645,51 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
         Callback = function()
             if fcRunning then
                 ResetFreecamPosition()
-            else
-                warn("[Freecam] Not active!")
             end
         end
     })
 
     local SvX = Tabs.Misc:AddSection("Server Features")
-    local reconnecting, queueEnabled = true, false,
+    local reconnecting = false
+    local errorConn
 
-        SvX:AddToggle({
-            Title = "Auto Reconnect",
-            Default = true,
-            Callback = function(state)
-                if state and not reconnecting then
-                    reconnecting = true
-                    GuiService.ErrorMessageChanged:Connect(function()
-                        task.wait(0.5)
-                        local success = pcall(function()
-                            if privateServerId ~= "" then
-                                TeleportService:TeleportToPrivateServer(placeId, privateServerId, { LocalPlayer })
-                            else
-                                TeleportService:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
-                            end
-                        end)
-                        if not success then
-                            task.wait(2)
-                            pcall(function()
-                                TeleportService:Teleport(placeId, LocalPlayer)
-                            end)
+    SvX:AddToggle({
+        Title = "Auto Reconnect",
+        Default = true,
+        Callback = function(state)
+            reconnecting = state
+
+            if errorConn and errorConn.Connected then
+                errorConn:Disconnect()
+                errorConn = nil
+            end
+
+            if state then
+                errorConn = GuiService.ErrorMessageChanged:Connect(function(msg)
+                    if not reconnecting or msg == "" then return end
+                    task.wait(0.5)
+                    local ok = pcall(function()
+                        if privateServerId and privateServerId ~= "" then
+                            TeleportService:TeleportToPrivateServer(placeId, privateServerId, { LocalPlayer })
+                        else
+                            TeleportService:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
                         end
                     end)
-                else
-                    reconnecting = false
-                end
+                    if not ok then
+                        task.wait(2)
+                        pcall(function()
+                            TeleportService:Teleport(placeId, LocalPlayer)
+                        end)
+                    end
+                end)
             end
-        })
+        end
+    })
 
     SvX:AddToggle({
         Title = "Auto Execute",
         Default = false,
         Callback = function(state)
-            queueEnabled = state
             if queue_on_teleport then
                 queue_on_teleport(state and [[
                     loadstring(game:HttpGet("https://raw.githubusercontent.com/MajestySkie/Chloe-X/main/Main/ChloeX"))()
@@ -739,7 +697,6 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
             end
         end
     })
-
     --== Anti AFK
     local GC = getconnections or get_signal_cons
     if GC then
