@@ -121,6 +121,158 @@ If you have suggestions or found bugs, please report them to <font color="rgb(0,
         end
     })
 
+    MiscBooster:AddButton({
+        Title = "Reduc Map (irivisible)",
+        Content = "Extreme Reduc map, VFX, Terrain, and Character Optimization",
+        Callback = function()
+            local Players    = game:GetService("Players")
+            local Lighting   = game:GetService("Lighting")
+            local RunService = game:GetService("RunService")
+            local Terrain    = workspace:FindFirstChildOfClass("Terrain")
+
+            local function nameMatch(name, patterns)
+                name = string.lower(name)
+                for _, p in ipairs(patterns) do
+                    if string.find(name, p) then
+                        return true
+                    end
+                end
+                return false
+            end
+
+            local DELETE_NAME_PATTERNS = {
+                "tree", "lightpole", "barrel", "cylinder", "floor",
+                "vine", "plane", "default", "rock", "terrainbase"
+            }
+
+            local VFX_CLASSES = {
+                "ParticleEmitter", "Trail", "Beam", "Fire",
+                "Smoke", "Sparkles", "Highlight", "Explosion"
+            }
+
+            local POSTFX_CLASSES = {
+                "BloomEffect", "SunRaysEffect", "ColorCorrectionEffect",
+                "DepthOfFieldEffect", "BlurEffect", "Atmosphere"
+            }
+
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("Model") and nameMatch(obj.Name, { "tree", "lightpole", "barrel" }) then
+                    obj:Destroy()
+                end
+            end
+
+            local Islands = workspace:FindFirstChild("Islands")
+            if Islands then
+                local fisher = Islands:FindFirstChild("Fisherman Island")
+                if fisher then
+                    local bg = fisher:FindFirstChild("Background Buildings")
+                    if bg then bg:Destroy() end
+                end
+                local christmas = Islands:FindFirstChild("ChristmasDecor [Fisheman Island]")
+                if christmas then christmas:Destroy() end
+            end
+
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
+                    obj:Destroy()
+                end
+            end
+
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                for _, cls in ipairs(VFX_CLASSES) do
+                    if obj:IsA(cls) then
+                        obj:Destroy()
+                        break
+                    end
+                end
+            end
+
+            for _, obj in ipairs(Lighting:GetChildren()) do
+                for _, cls in ipairs(POSTFX_CLASSES) do
+                    if obj:IsA(cls) then
+                        obj:Destroy()
+                        break
+                    end
+                end
+            end
+
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("Decal") or obj:IsA("Texture") then
+                    obj:Destroy()
+                end
+            end
+
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") then
+                    if nameMatch(obj.Name, DELETE_NAME_PATTERNS) then
+                        obj:Destroy()
+                    else
+                        obj.Material = Enum.Material.Plastic
+                        obj.Transparency = 0
+                        obj.BrickColor = BrickColor.new("Medium stone grey")
+                        obj.CastShadow = false
+                        obj.Reflectance = 0
+                        if obj:IsA("MeshPart") then
+                            obj.CollisionFidelity = Enum.CollisionFidelity.Box
+                        end
+                    end
+                end
+            end
+
+            if Terrain then
+                Terrain.WaterTransparency = 1
+                Terrain.WaterReflectance = 0
+                Terrain.WaterWaveSize = 0
+                Terrain.WaterWaveSpeed = 0
+            end
+
+            pcall(function()
+                Lighting.GlobalShadows = false
+                Lighting.FogStart = 9e9
+                Lighting.FogEnd = 9e9
+                Lighting.Brightness = 1
+            end)
+
+            local cam = workspace.CurrentCamera
+            if cam then
+                cam.CameraType = Enum.CameraType.Custom
+                cam.FieldOfView = 70
+            end
+
+            pcall(function()
+                settings().Physics.PhysicsEnvironmentalThrottle = Enum.EnviromentalPhysicsThrottle.Disabled
+                settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+            end)
+
+            local function optimizeCharacter(char)
+                for _, obj in ipairs(char:GetDescendants()) do
+                    if obj:IsA("Accessory") then
+                        obj:Destroy()
+                    elseif obj:IsA("BasePart") then
+                        obj.Material = Enum.Material.Plastic
+                        obj.BrickColor = BrickColor.new("Medium stone grey")
+                        obj.CastShadow = false
+                    else
+                        for _, cls in ipairs(VFX_CLASSES) do
+                            if obj:IsA(cls) then
+                                obj:Destroy()
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+
+            local lp = Players.LocalPlayer
+            if lp then
+                if lp.Character then
+                    optimizeCharacter(lp.Character)
+                end
+                lp.CharacterAdded:Connect(optimizeCharacter)
+            end
+        end
+    })
+
     MiscBooster:AddToggle({
         Title = "Black Screen",
         Content = "Make your screen fully black",
