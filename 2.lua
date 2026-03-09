@@ -1173,3 +1173,4 @@ return function(Window, Tabs)
 			end
 		end
 	end
+end
