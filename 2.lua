@@ -238,7 +238,6 @@ return function(Window, Tabs)
 		Callback = function(state)
 			if typeof(RunService.Set3dRenderingEnabled) == "function" then
 				RunService:Set3dRenderingEnabled(not state)
-				SaveConfig()
 			end
 		end,
 	})
